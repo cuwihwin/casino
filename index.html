@@ -97,6 +97,11 @@ input[type=text],input[type=number],select{min-height:44px;border-radius:10px;bo
 .result{font-weight:800;font-size:20px;min-height:32px;text-align:center}
 .result.w{color:var(--win)}.result.l{color:var(--lose)}
 .chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip:disabled{opacity:.3}
+.betbox{display:flex;align-items:center;gap:12px;margin-right:auto;margin-left:14px}
+.pile{position:relative;width:44px;height:60px}.pile i{position:absolute;left:2px;width:40px;height:14px;border-radius:50%;border:3px dashed;box-shadow:0 2px 0 rgba(0,0,0,.35)}
+.betv{display:grid;line-height:1.15}.betv b{font-size:20px}.betv span{font-size:12px;color:var(--mute)}
+.clr{min-height:32px;padding:0 12px;font-size:13px}
 .chip{width:50px;height:50px;padding:0;border-radius:50%;border:0;background:radial-gradient(circle,#e8473b 0 52%,transparent 53%),repeating-conic-gradient(#f6e9cf 0 12deg,#e8473b 12deg 45deg);box-shadow:inset 0 0 0 2px rgba(0,0,0,.35),0 3px 6px rgba(0,0,0,.5);font-weight:800;font-size:14px}
 .chip.on{transform:translateY(-5px);box-shadow:0 0 0 3px #f6e9cf,0 6px 0 rgba(0,0,0,.35)}
 .pickbox{margin:10px 0}
@@ -159,7 +164,7 @@ input[type=text],input[type=number],select{min-height:44px;border-radius:10px;bo
 .mid{position:absolute;left:50%;top:-2px;bottom:-2px;width:2px;background:var(--ink)}
 .verdict{font-weight:800;font-size:20px;margin:6px 0}
 .editor{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:center;margin:10px 0}
-input[type=range]{width:100%;accent-color:var(--brass);min-height:44px}
+input[type=range]{display:block;width:100%;box-sizing:border-box;margin:6px 0;padding:0;accent-color:var(--brass);min-height:44px}
 .fig{position:relative;height:220px;margin-top:8px}
 .fig canvas{position:absolute;inset:0;width:100%;height:100%}
 details{margin-top:14px;border-top:1px solid var(--line);padding-top:10px}
@@ -195,6 +200,7 @@ summary{cursor:pointer;font-weight:600;min-height:32px}
       <div class="result" id="result" aria-live="polite"></div>
       <div class="row" style="justify-content:space-between;margin-top:10px">
         <div class="chips" id="chips"></div>
+        <div class="betbox" id="betbox"></div>
         <button class="gold" id="play">Punta e gioca</button>
       </div>
       <div class="stats" id="stats"></div>
@@ -217,8 +223,8 @@ summary{cursor:pointer;font-weight:600;min-height:32px}
       <div class="row small mute" style="justify-content:space-between"><span>a favore del banco</span><span>a favore tuo</span></div>
       <div class="verdict" id="verdict"></div>
       <p class="small mute" id="evtext"></p>
-      <h3 style="margin-top:20px">Gioca mille volte in un istante</h3>
-      <div class="row"><select id="simN" aria-label="Numero di giocate"><option>100</option><option selected>10000</option><option>1000000</option></select><button id="sim">Simula con 1 € a giocata</button></div>
+      <h3 style="margin-top:20px">Simula tante giocate in un istante</h3>
+      <div class="row"><select id="simN" aria-label="Numero di giocate"><option value="100">100 giocate</option><option value="10000" selected>10.000 giocate</option><option value="1000000">1.000.000 di giocate</option></select><button id="sim">Simula con 1 € a giocata</button></div>
       <div class="fig"><canvas id="simC"></canvas></div>
       <p class="small mute" id="simtext">La linea mostra il guadagno medio per euro man mano che le giocate aumentano; la tratteggiata è il valore atteso.</p>
     </div>
@@ -319,25 +325,25 @@ doppio:{name:'Doppio',pay:10,rule:'Scegli una somma. Si lanciano due dadi.',pick
   space(el,p,set){let h='<div class="g6"><div class="h">+</div>'+[1,2,3,4,5,6].map(v=>`<div class="h">${v}</div>`).join('');for(let a=1;a<=6;a++){h+=`<div class="h">${a}</div>`;for(let b=1;b<=6;b++)h+=`<div class="${a+b===p?'y':''}">${a+b}</div>`}h+='</div><div class="bars">';for(let s=2;s<=12;s++)h+=`<button data-s="${s}" class="${s===p?'y':''}" style="height:${(6-Math.abs(s-7))/6*100}%" aria-label="Somma ${s}"><small>${s}</small></button>`;el.innerHTML=h+'</div><p class="small mute" style="margin-top:28px">Tocca una colonna per scegliere la somma.</p>';el.querySelectorAll('.bars button').forEach(b=>b.onclick=()=>set(+b.dataset.s))},
   concept:'Ω è fatto di 36 coppie ordinate (primo dado, secondo dado), tutte equiprobabili. Le somme invece no: il 7 si ottiene in 6 modi, il 2 in uno solo.',
   async play(p,st){let a,b;for(let k=0;k<6;k++){a=rnd(6)+1;b=rnd(6)+1;st.innerHTML=diceSvg([a,b]);await sleep(80)}return{win:a+b===p,msg:`${a} + ${b} = ${a+b}`}}},
-colore:{name:'Colore',pay:2,rule:'Rosso o nero? Si scopre la prima carta.',pick:()=>1,
+colore:{name:'Colore',pay:2,rule:'Rosso o nero? Scopri la prima carta del mazzo e controlla se hai vinto. I Jolly non hanno valore.',pick:()=>1,
   total:()=>54,wins:()=>26,
   ui(el,p,set){choices(el,[{v:1,l:'Rosso'},{v:0,l:'Nero'}],v=>v===p,set)},
   space(el,p){el.innerHTML=deckGrid(c=>!c.j&&c.red===p)},
   concept:'Ω contiene 54 carte. Le carte rosse sono 26, ma i due jolly non hanno colore: P = 26/54, poco meno di 1/2. È lo stesso trucco dello zero verde alla roulette.',
   async play(p,st){const c=DECK[rnd(54)];await flip(st,c);return{win:!c.j&&c.red===p,msg:c.j?'Jolly! Nessun colore vince':c.r+' di '+SUITS[c.si][1]}}},
-seme:{name:'Seme',pay:4,rule:'Scegli un seme. Si scopre la prima carta.',pick:()=>1,
+seme:{name:'Seme',pay:4,rule:'Scegli un seme. Scopri la prima carta del mazzo e controlla se hai vinto. I Jolly non hanno seme.',pick:()=>1,
   total:()=>54,wins:()=>13,
   ui(el,p,set){choices(el,SUITS.map((s,i)=>({v:i,l:s[0]+' '+s[1]})),v=>v===p,set)},
   space(el,p){el.innerHTML=deckGrid(c=>c.si===p)},
   concept:'Ogni seme ha 13 carte su 54: P = 13/54. Senza jolly sarebbe 1/4 e il premio di 4 € sarebbe equo.',
   async play(p,st){const c=DECK[rnd(54)];await flip(st,c);return{win:c.si===p,msg:c.j?'Jolly!':c.r+' di '+SUITS[c.si][1]}}},
-carta:{name:'Carta',pay:50,rule:'Scegli una carta. Si scopre la prima del mazzo.',pick:()=>0,
-  total:()=>54,wins:()=>1,
-  ui(el,p,set){const jk=p>=52,si=jk?4:Math.floor(p/13),ri=jk?p-52:p%13;const ranks=jk?['nero','rosso']:RANKS;el.innerHTML=`<div class="row"><select id="rankSel" aria-label="Numero">${ranks.map((r,i)=>`<option value="${i}" ${i===ri?'selected':''}>${r}</option>`).join('')}</select><select id="suitSel" aria-label="Seme">${SUITS.map((x,i)=>`<option value="${i}" ${i===si?'selected':''}>${x[0]} ${x[1]}</option>`).join('')}<option value="4" ${jk?'selected':''}>★ jolly</option></select></div>`;const upd=e=>{const sv=+el.querySelector('#suitSel').value,rv=+el.querySelector('#rankSel').value;set(sv===4?52+(e&&e.target.id==='suitSel'&&!jk?1:Math.min(rv,1)):sv*13+(e&&e.target.id==='suitSel'&&jk?0:rv))};el.querySelectorAll('select').forEach(x=>x.onchange=upd)},
-space(el,p){el.innerHTML=deckGrid((c,i)=>i===p)},
-  concept:'Un solo esito favorevole su 54 (puoi puntare anche su uno dei due jolly): P = 1/54. Il premio equo sarebbe 54 €.',
-  async play(p,st){const i=rnd(54),c=DECK[i];await flip(st,c);return{win:i===p,msg:c.j?'Jolly '+(c.red?'rosso':'nero'):c.r+' di '+SUITS[c.si][1]}}},
-mazzo:{name:'Mazzo ordinato',pay:1e9,rule:'Metti in ordine le 52 carte come vuoi: vinci se il mazzo mischiato esce identico.',pick:()=>[...Array(52).keys()],
+carta:{name:'Carta',pay:50,rule:'Scegli una carta. Scopri la prima carta del mazzo e controlla se hai vinto. Qui niente Jolly: il mazzo ha 52 carte.',pick:()=>0,
+  total:()=>52,wins:()=>1,
+  ui(el,p,set){const si=Math.floor(p/13),ri=p%13;el.innerHTML=`<div class="row"><select id="rankSel" aria-label="Numero">${RANKS.map((r,i)=>`<option value="${i}" ${i===ri?'selected':''}>${r}</option>`).join('')}</select><select id="suitSel" aria-label="Seme">${SUITS.map((x,i)=>`<option value="${i}" ${i===si?'selected':''}>${x[0]} ${x[1]}</option>`).join('')}</select></div>`;const upd=()=>set(+el.querySelector('#suitSel').value*13+ +el.querySelector('#rankSel').value);el.querySelectorAll('select').forEach(x=>x.onchange=upd)},
+  space(el,p){el.innerHTML=deckGrid((c,i)=>i===p,1)},
+  concept:'Qui i Jolly sono fuori dal mazzo: un solo esito favorevole su 52, quindi P = 1/52 e il premio equo sarebbe 52 €.',
+  async play(p,st){const i=rnd(52),c=DECK[i];await flip(st,c);return{win:i===p,msg:c.r+' di '+SUITS[c.si][1]}}},
+mazzo:{name:'Mazzo ordinato',pay:1e9,rule:'Metti in ordine le 52 carte come vuoi (qui niente Jolly): vinci se il mazzo mischiato esce identico.',pick:()=>[...Array(52).keys()],
   total:()=>Number(fact(52)),wins:()=>1,
   ui(el,p,set){fanUi(el,p,set)},
   space(el){if(el.querySelector('.story'))return;el.innerHTML=`<div class="formula">52! = 52 · 51 · 50 · … · 2 · 1 =</div><div class="big">${fact(52).toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.')}</div><p class="small mute" style="margin-top:10px">Circa 8 · 10⁶⁷ ordinamenti: un numero che non si riesce nemmeno a immaginare.</p>${storyHtml()}`},
@@ -376,12 +382,12 @@ targa:{name:'Targa',pay:5e8,rule:'Indovina la targa nascosta.',pick:()=>'AB123CD
 };
 const TABLES=[
  {id:'dadi',n:1,name:'Dadi',blurb:'Un dado o due, punta su un numero o su una somma.',games:['singolo','doppio'],x:190,y:150},
- {id:'carte',n:2,name:'Carte',blurb:'Colore, seme o carta esatta, ma nel mazzo ci sono due jolly.',games:['colore','seme','carta'],x:500,y:130},
+ {id:'carte',n:2,name:'Carte',blurb:'Colore, seme o carta esatta. Occhio ai jolly.',games:['colore','seme','carta'],x:500,y:130},
  {id:'mazzo',n:3,name:'Mazzo intero',blurb:'Un miliardo se indovini l’ordine di 52 carte.',games:['mazzo'],x:810,y:150},
  {id:'cavalli',n:4,name:'Corse di cavalli',blurb:'Sette cavalli: podio, podio ordinato o classifica.',games:['podioOrd','podio','classifica'],x:330,y:390},
  {id:'lucchetti',n:5,name:'Lucchetti e targhe',blurb:'Indovina un codice o una targa al primo colpo.',games:['lucchetto','targa'],x:680,y:390}];
 
-function deckGrid(f){return '<div class="dk">'+DECK.map((c,i)=>`<div class="${c.red?'r':''} ${c.j?'jk':''} ${f(c,i)?'y':''}">${c.j?'JOLLY':c.r+c.s}</div>`).join('')+'</div>'}
+function deckGrid(f,noJ){return '<div class="dk">'+(noJ?DECK.slice(0,52):DECK).map((c,i)=>`<div class="${c.red?'r':''} ${c.j?'jk':''} ${f(c,i)?'y':''}">${c.j?'JOLLY':c.r+c.s}</div>`).join('')+'</div>'}
 async function flip(st,c){st.innerHTML=cardSvg(['back']);await sleep(450);st.innerHTML=cardSvg([c])}
 function horsePick(el,p,k,set,ordered){
   const lab=ordered?(k===3?['1°','2°','3°']:p.map((_,i)=>i+1+'°')):null;
@@ -406,7 +412,7 @@ function podioGrid(el,p,ordered){
 function dots(cv,n,hi){const draw=()=>{const W=cv.clientWidth,H=cv.clientHeight,dpr=devicePixelRatio||1;cv.width=W*dpr;cv.height=H*dpr;const x=cv.getContext('2d');x.scale(dpr,dpr);const cols=Math.ceil(Math.sqrt(n*W/H)),rows=Math.ceil(n/cols),s=Math.min(W/cols,H/rows);for(let i=0;i<n;i++){x.fillStyle=hi.includes(i)?'#e0bb5c':'rgba(243,236,216,.22)';const r=hi.includes(i)?s*1.6:s*.36;x.beginPath();x.arc((i%cols+.5)*s,(Math.floor(i/cols)+.5)*s,r,0,7);x.fill()}};const ro=new ResizeObserver(draw);ro.observe(cv)}
 
 /* ===== stato ===== */
-let bank=100,stake=1,tb=null,gk=null,pick=null,pay=null,busy=false;
+let bank=100,stake=0,bet=[],tb=null,gk=null,pick=null,pay=null,busy=false;
 const tally={};
 const P=()=>G[gk].wins(pick)/G[gk].total();
 
@@ -608,9 +614,13 @@ function renderAll(){
   g.ui($('#pick'),pick,setPick);
   g.space($('#space'),pick,setPick);
   $('#concept').innerHTML=`<p>${g.concept}</p>`;
-  const CH={1:['#f6e9cf','#2a7c9c','#14221c'],5:['#e8473b','#f6e9cf','#f6e9cf'],10:['#2a7c9c','#f6e9cf','#f6e9cf'],25:['#dcb94c','#14221c','#14221c']};$('#chips').innerHTML=[1,5,10,25].map(v=>{const [c,e,t]=CH[v];return `<button class="chip ${v===stake?'on':''}" data-v="${v}" aria-label="Punta ${v} euro" style="color:${t};background:radial-gradient(circle,${c} 0 52%,transparent 53%),repeating-conic-gradient(${e} 0 12deg,${c} 12deg 45deg)">${v}</button>`}).join('');
-  $('#chips').querySelectorAll('.chip').forEach(b=>b.onclick=()=>{stake=+b.dataset.v;renderAll()});
-  $('#bank').textContent=nf(bank,2)+' €';$('#play').disabled=busy||bank<stake;
+  const CH=window.CHC={1:['#f6e9cf','#2a7c9c','#14221c'],5:['#e8473b','#f6e9cf','#f6e9cf'],10:['#2a7c9c','#f6e9cf','#f6e9cf'],25:['#dcb94c','#14221c','#14221c']};stake=bet.reduce((a,v)=>a+v,0);
+  $('#chips').innerHTML=[1,5,10,25].map(v=>{const [c,e,t]=CH[v];return `<button class="chip" data-v="${v}" ${busy||stake+v>bank?'disabled':''} aria-label="Aggiungi ${v} euro alla puntata" style="color:${t};background:radial-gradient(circle,${c} 0 52%,transparent 53%),repeating-conic-gradient(${e} 0 12deg,${c} 12deg 45deg)">${v}</button>`}).join('');
+  $('#chips').querySelectorAll('.chip').forEach(b=>b.onclick=()=>{bet.push(+b.dataset.v);renderAll()});
+  const shown=bet.slice(-14);
+  $('#betbox').innerHTML=`<div class="pile" aria-hidden="true">${shown.map((v,i)=>{const [c,e]=CH[v];return `<i style="bottom:${i*4}px;background:${c};border-color:${e}"></i>`}).join('')}</div><div class="betv"><b>${stake?nf(stake)+' €':'—'}</b><span>${stake?'la tua puntata':'clicca le fiches per puntare'}</span></div>${stake?`<button class="clr" id="clr" ${busy?'disabled':''}>Azzera</button>`:''}`;
+  if(stake)$('#clr').onclick=()=>{bet=[];renderAll()};
+  $('#bank').textContent=nf(bank,2)+' €';$('#play').disabled=busy||!stake||bank<stake;$('#play').textContent=stake?`Punta ${nf(stake)} € e gioca`:'Punta e gioca';
   renderNums();renderStats();
 }
 function renderNums(){
@@ -630,12 +640,12 @@ function renderStats(){
   $('#stats').innerHTML=[[t.n,'giocate'],[t.w,'vinte'],[eur(t.net),'bilancio']].map(([b,s])=>`<div class="stat"><b>${b}</b><span>${s}</span></div>`).join('');
 }
 async function play(){
-  if(busy||bank<stake)return;busy=true;bank-=stake;renderAll();$('#result').textContent='';
+  if(busy||!stake||bank<stake)return;busy=true;bank-=stake;renderAll();$('#result').textContent='';
   const r=await G[gk].play(pick,$('#stage'));
   const t=tally[gk]=tally[gk]||{n:0,w:0,net:0};t.n++;
   if(r.win){bank+=stake*pay;t.w++;t.net+=stake*pay-stake;$('#result').className='result w';$('#result').textContent=`${r.msg}. Hai vinto ${big(stake*pay)} €!`}
   else{t.net-=stake;$('#result').className='result l';$('#result').textContent=`${r.msg}. Perdi ${stake} €.`}
-  busy=false;$('#bank').textContent=nf(bank,2)+' €';$('#play').disabled=bank<stake;renderStats();
+  busy=false;if(stake>bank)bet=[];renderAll();
 }
 function setPay(v){if(!(v>0)||!isFinite(v))return;pay=v;renderAll()}
 function simulate(){
